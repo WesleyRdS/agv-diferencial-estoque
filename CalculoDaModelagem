@@ -1,0 +1,17 @@
+/*Para motor com 100 por cento da velocidade
+Xg = 17.5929188601 rad/s
+vXg = 4,926017281 cm/s
+
+TETAg = 3,909537524 rad/s - 224,54 graus/s
+        1,57 rad/s        - 90 graus/s
+        6,28 rad/s        - 360 graus/s
+
+vTeta = 1,094115556 cm/s
+
+Se 
+    224,54---------100
+        90---------X
+
+    224,54X = 9000
+          X ~= 40,08
+*/
