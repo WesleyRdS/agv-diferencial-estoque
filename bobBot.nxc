@@ -1,10 +1,20 @@
-//Definições de Ambiente
 #define WALL 25
 #define BLACK 50
 #define SILVER 80
-#define REDMAX 69
-#define REDMIN 65
+#define REDMAX 73
+#define REDMIN 71
 #define OBJECT 25
+
+
+//Bloco de Variaveis
+mutex mc;
+bool Getted = false;
+bool Rotate = false;
+string state  = "Recharge";
+int localCounter = 0;
+int power = 48;
+
+
 
 
 //Definições do robo
@@ -14,17 +24,7 @@
 #define CIRCUMFERENCE 17.59291884
 #define PIVOT_RADIUS 3.541666667
 
-
-mutex mc;
-bool Getted = false;
-bool Rotate = false;
-int localCounter = 0;
-float MotorB;
-float MotorC;
-string state  = "Recharge";
-float dt;
-float dot_omega;
-
+//Maquina de Estado
 void localMS(){
 	switch(localCounter){
 	    case 0:
@@ -47,6 +47,7 @@ void localMS(){
 		break;
 	    case 6:
 		state = "ExitHousing";
+		SetSensorLight(IN_3,true);
 		break;
 	    case 7:
 		state = "SearchBase";
@@ -54,165 +55,144 @@ void localMS(){
 	    case 8:
 		state = "SearchRecharge";
 		break;
-	    
+
 	}
+
 }
 
-void CalculateMotorSpeeds(float dt){
-	float rotationB = MotorRotationCount(OUT_B);
-	float rotationC = MotorRotationCount(OUT_C);
-
-	float leftSpeed = (rotationC * CIRCUMFERENCE)/dt;
-	float rightSpeed = (rotationB * CIRCUMFERENCE)/dt;
-
-	float dot_omega = (leftSpeed + rightSpeed)/(2*PIVOT_RADIUS);
-	MotorB = abs(rightSpeed);
-	MotorC = abs(leftSpeed);
-}
-
-void DifferentialDriveKinematic(float angle){
-	
-	float arcLenght = PIVOT_RADIUS * ((angle * PI)/180);
-	float rotations = arcLenght / (2 * PI * WHELL_RADIUS);
-	int motorPulses = rotations * PULSE_PER_REVOLUTION;
-
-	float speed = (MotorB + MotorC)/2;
-	float time = (motorPulses/(speed/100*PULSE_PER_REVOLUTION/1000));
-	float tf = CurrentTick() + (time * 1000);
+/* Função para contagem de ticks do NXT
+1-Para uma revolução completa é necessario uma contagem de 180 ticks 2 pulsos por tick o que da 360 pulsos por revolução do eixo do motor
+2-A frequência do NXT é de 1000Hz
+*/
+void DifferentialDriveKinematic(){
+	long tf;
+	long time;
+	if(Getted == true){
+		time = 1500;
+	}else{
+		time = 1000;
+	}
+	tf = CurrentTick() + time;
 	while(CurrentTick() < tf);
-	
+	tf = 0;
 }
 
+//Funções para o robo girar no proprio eixo, andar e girar novamente no sentido oposto 
 void TurnNinetyDegreesLeftPivoting(){
+	//Curva
 	Acquire(mc);
-	OnFwdSync(OUT_BC, MotorB, 100);
-	DifferentialDriveKinematic(90);
-	Off(OUT_BC);
+	OnFwdSync(OUT_BC, power, 0);
+	DifferentialDriveKinematic();
+    Off(OUT_BC);
 	Release(mc);
 
 	Acquire(mc);
-	OnRev(OUT_B, MotorB);
-	OnFwd(OUT_C, MotorC);
-	DifferentialDriveKinematic(90);
-	Off(OUT_BC);
+	OnRevSync(OUT_BC, power, 100);
+	DifferentialDriveKinematic();
+    Off(OUT_BC);
 	Release(mc);
 
 	Acquire(mc);
-	OnRevSync(OUT_BC, MotorB,100);
-	DifferentialDriveKinematic(90);
+	OnRevSync(OUT_BC, power, 0);
+	DifferentialDriveKinematic();
 	Off(OUT_BC);
-	Release(mc);
-
-	Acquire(mc);
-	OnRev(OUT_C, MotorC);
-	OnFwd(OUT_B, MotorB);
-	DifferentialDriveKinematic(90);
-	Off(OUT_BC);
+	OnRevSync(OUT_BC, power, -100);
+	DifferentialDriveKinematic();
+    Off(OUT_BC);
 	Release(mc);
 }
 
 void TurnNinetyDegreesRightPivoting(){
+    //Curva
 	Acquire(mc);
-	OnFwdSync(OUT_BC, MotorB,100);
-	DifferentialDriveKinematic(90);
-	Off(OUT_BC);
+	OnFwdSync(OUT_BC, power, 0);
+	DifferentialDriveKinematic();
+    Off(OUT_BC);
 	Release(mc);
 
 	Acquire(mc);
-	OnRev(OUT_C, MotorC);
-	OnFwd(OUT_B, MotorB);
-	DifferentialDriveKinematic(90);
-	Off(OUT_BC);
+	OnRevSync(OUT_BC, power, -100);
+	DifferentialDriveKinematic();
+    Off(OUT_BC);
 	Release(mc);
 
 	Acquire(mc);
-	OnRevSync(OUT_BC, MotorB,100);
-	DifferentialDriveKinematic(90);
+	OnRevSync(OUT_BC, power, 0);
+	DifferentialDriveKinematic();
 	Off(OUT_BC);
-	Release(mc);
-
-	Acquire(mc);
-	OnRev(OUT_B, MotorB);
-	OnFwd(OUT_C, MotorC);
-	DifferentialDriveKinematic(90);
-	Off(OUT_BC);
+	OnRevSync(OUT_BC, power, 100);
+	DifferentialDriveKinematic();
+    Off(OUT_BC);
 	Release(mc);
 }
 
+//Função para o robo girar 180 graus no proprio eixo
+void Turn180Degrees(){
+    Acquire(mc);
+	OnFwdSync(OUT_BC, power, 0);
+	DifferentialDriveKinematic();
+    Off(OUT_BC);
+	Release(mc);
+
+	Acquire(mc);
+	OnRevSync(OUT_BC, power, -100);
+	DifferentialDriveKinematic();
+	DifferentialDriveKinematic();
+    Off(OUT_BC);
+	Release(mc);
+
+}
+
+//Função para o robo girar 90 graus no proprio eixo
 void Turn90Degrees(){
-	Acquire(mc);
-	OnFwdSync(OUT_BC, MotorB,100);
-	DifferentialDriveKinematic(90);
-	Off(OUT_BC);
+    Acquire(mc);
+	OnFwdSync(OUT_BC, power, 0);
+	DifferentialDriveKinematic();
+    Off(OUT_BC);
 	Release(mc);
 
 	Acquire(mc);
-	OnRev(OUT_C, MotorC);
-	OnFwd(OUT_B, MotorB);
-	DifferentialDriveKinematic(90);
-	Off(OUT_BC);
+	OnRevSync(OUT_BC, power, -100);
+	DifferentialDriveKinematic();
+    Off(OUT_BC);
 	Release(mc);
-}
 
-task DeltaTime(){
-	long lastTick = CurrentTick();
-	while(true){
-		long currentTick = CurrentTick();
-        dt = (currentTick - lastTick) / 1000.0;
-        lastTick = currentTick;
-	}
-}
-
-//Thread para exibir valores no display(Debug)
-task view_atributes(){
-	while(true){
-		TextOut(0,LCD_LINE1,"Sensor Ultrassonico:");
-		NumOut(0,LCD_LINE2,SensorUS(IN_4));
-		TextOut(0,LCD_LINE3,"Sensor de Luz:");
-		NumOut(0, LCD_LINE4, SensorValue(IN_3));
-		TextOut(0,LCD_LINE5,"Sensor de Toque:");
-		NumOut(0,LCD_LINE6,SensorValue(IN_1));
-		TextOut(0,LCD_LINE7,"Estado:");
-		TextOut(0,LCD_LINE8,state);
-		Wait(200);
-		ClearScreen();
-	}
 }
 
 //Thread para retirar e depositar o objeto quando reconhecido
 task getObject(){
 	while(true){
 		if(state == "Warehouse"){
-			if(SensorUS(IN_4) <= OBJECT && Getted == false && SensorValue(IN_3) == 0){
+			if(SensorUS(IN_4) <= OBJECT && Getted == false && SensorValue(IN_1) == 0){
+				Acquire(mc);
 				Off(OUT_BC);
-				RotateMotor(OUT_A, 10, -90);
-				DifferentialDriveKinematic(90);
-				RotateMotor(OUT_A, 10, 90);
-				DifferentialDriveKinematic(90);
+				RotateMotor(OUT_A, 25, -70);
+				Release(mc);
+				Wait(100);
+				RotateMotor(OUT_A, 25, 70);
 				Getted = true;
 				Rotate = true;
 				Off(OUT_A);
 				localCounter = localCounter + 1;
-				DifferentialDriveKinematic(90);
+				DifferentialDriveKinematic();
 				if(localCounter > 8){
 					localCounter = 0;
 		    		}
 		    		localMS();
 			}
 		}if(state == "Download"){
-			Off(OUT_BC);
-			RotateMotor(OUT_A, 10, -90);
-			DifferentialDriveKinematic(90);
 			Acquire(mc);
-			OnFwdSync(OUT_BC, MotorB, 100);
-			DifferentialDriveKinematic(90);
+			Off(OUT_BC);
+			RotateMotor(OUT_A, 25, -70);
+			Release(mc);
+			Acquire(mc);
+			OnFwdSync(OUT_BC, power, 0);
+			DifferentialDriveKinematic();
 			Off(OUT_BC);
 			Release(mc);
-			RotateMotor(OUT_A, 30, 90);
-            DifferentialDriveKinematic(90);
+			RotateMotor(OUT_A, 25, 70);
 			Off(OUT_A);
 			localCounter = localCounter + 1;
-			DifferentialDriveKinematic(90);
 			if(localCounter > 8){
                 		localCounter = 0;
             		}
@@ -224,6 +204,21 @@ task getObject(){
         	}
 	}
 }
+//Thread para exibir valores no display(Debug)
+task view_atributes(){
+	while(true){
+		TextOut(0,LCD_LINE1,"Sensor Ultrassonico:");
+		NumOut(0,LCD_LINE2,SensorUS(IN_4));
+		TextOut(0,LCD_LINE3,"Sensor de Luz:");
+		NumOut(0, LCD_LINE4, SensorValue(IN_2));
+		TextOut(0,LCD_LINE5,"Sensor de Toque:");
+		NumOut(0,LCD_LINE6,SensorValue(IN_3));
+		TextOut(0,LCD_LINE7,"Estado:");
+		TextOut(0,LCD_LINE8,state);
+		Wait(200);
+		ClearScreen();
+	}
+}
 
 //Thread para desviar de obstaculos
 task avoid_wall(){
@@ -231,33 +226,21 @@ task avoid_wall(){
 		if(SensorUS(IN_4) < WALL &&  SensorValue(IN_1) == 1){
 			Off(OUT_BC);
 			Acquire(mc);
-			OnFwdSync(OUT_BC, MotorB, 100);
-			DifferentialDriveKinematic(90);
+			OnFwdSync(OUT_BC, power, 0);
+			DifferentialDriveKinematic();
             Off(OUT_BC);
 			Release(mc);
-
 			Acquire(mc);
-			OnRev(OUT_C, MotorC);
-			OnFwd(OUT_B, MotorB);
-			DifferentialDriveKinematic(90);
+			OnRevSync(OUT_BC, power, -100);
+			DifferentialDriveKinematic();
             Off(OUT_BC);
 			Release(mc);
 		}else{
-			if(Rotate == true){
-				Rotate = false;
-				Acquire(mc);
-   				OnRev(OUT_B, MotorB);
-				OnFwd(OUT_C, MotorC);
-				DifferentialDriveKinematic(90);
-                Off(OUT_BC);
-				Release(mc);
-				
-				
-			}
+			
 			Acquire(mc);
-			OnRevSync(OUT_BC, MotorB, 100);
+			OnRevSync(OUT_BC, power, 0);
 			Release(mc);
-		
+
 		}
 	}
 }
@@ -273,42 +256,39 @@ task line_detect(){
 				Turn90Degrees();
 			}if(state == "ExitHousing"){
 				Acquire(mc);
-				OnFwdSync(OUT_BC, MotorB, 100);
-				DifferentialDriveKinematic(90);
+				OnFwdSync(OUT_BC, power, 0);
+				DifferentialDriveKinematic();
                 Off(OUT_BC);
-			  	
-				OnRev(OUT_B, MotorB);
-				OnFwd(OUT_C, MotorC);
-				DifferentialDriveKinematic(90);
+
+				OnRevSync(OUT_BC, power, 100);
+				DifferentialDriveKinematic();
                 Off(OUT_BC);
 				Release(mc);
-				
 
-					
+
+
 			}
 		}if(SensorValue(IN_3) > SILVER){
 			localCounter = localCounter + 1;
-			DifferentialDriveKinematic(90);
+			Wait(200);
 			if(localCounter > 8){
                 		localCounter = 0;
             		}
             		localMS();
 		}if(SensorValue(IN_3) > REDMIN && SensorValue(IN_3) < REDMAX){
-            		if(state == "Stock" || state == "SearchBase"){
-			    	TurnNinetyDegreesRightPivoting();
-            		}
-            		if(state == "Housing"){
-            			Turn90Degrees();
+            		if(state == "Download"){
+            			Turn180Degrees();
             		}
 		}
-				
+
 	}
 }
 
-//Main  
+
+//Main
 task main(){
 	SetSensorLight(IN_3);
 	SetSensorUltrasonic(IN_4);
 	SetSensorTouch(IN_1);
-	Precedes(getObject,line_detect,avoid_wall,view_atributes,DeltaTime);
+	Precedes(getObject,line_detect,avoid_wall,view_atributes);
 }
