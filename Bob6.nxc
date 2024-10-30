@@ -1,0 +1,313 @@
+#define WALL 25
+#define BLACK 50
+#define SILVER 79
+#define REDMAX 63
+#define REDMIN 60
+#define OBJECT 25
+#define LeftEngine OUT_C
+#define RightEngine OUT_B
+
+//Definições do robo
+
+#define BOB_DIAMETER 17.0
+#define WHELL_RADIUS 2.8
+#define PULSE_PER_REVOLUTION 360
+#define CIRCUMFERENCE 17.59291884
+#define PIVOT_RADIUS 3.541666667
+#define FREQUENCY 1000
+
+string state  = "Recharge";
+bool Getted = false;
+int localCounter = 0;
+int Vx_d = 34;
+int Vx_e = 30;
+long MotorBtacho = 0;
+long MotorCtacho = 0;
+long MotorB_TachoAnt = 0;
+long MotorC_TachoAnt = 0;
+long dt = 0;
+long dt_o = 0;
+long omegaB = 0;
+long omegaC = 0;
+float tetaG = 0;
+mutex motor_control;
+
+void localMS()
+{
+	switch(localCounter)
+    {
+	    case 0:
+		state = "Recharge";
+		break;
+	    case 1:
+		state = "Stock";
+		break;
+	    case 2:
+		state = "Warehouse";
+		break;
+	    case 3:
+		state = "ExitWarehouse";
+		break;
+	    case 4:
+		state = "Housing";
+		break;
+	    case 5:
+		state = "Download";
+		break;
+	    case 6:
+		state = "ExitHousing";
+		break;
+	    case 7:
+		state = "SearchBase";
+		break;
+	    case 8:
+		state = "SearchRecharge";
+		break;
+
+	}
+}
+
+void DifferentialDriveKinematic(){
+	long tf;
+
+	tf = CurrentTick() + 1450;
+	while(CurrentTick() < tf);
+	tf = 0;
+}
+void pivoting(){
+	//Curva
+	Acquire(motor_control);
+	OnRev(LeftEngine, Vx_e);
+        OnRev(RightEngine, Vx_d);
+	DifferentialDriveKinematic();
+        Off(OUT_BC);
+	Release(motor_control);
+
+	Acquire(motor_control);
+	OnRev(RightEngine, Vx_d);
+	OnFwd(LeftEngine, Vx_e);
+	DifferentialDriveKinematic();
+        Off(OUT_BC);
+	Release(motor_control);
+
+	Acquire(motor_control);
+	OnFwd(LeftEngine, Vx_e);
+    	OnFwd(RightEngine, Vx_d);
+	DifferentialDriveKinematic();
+	Off(OUT_BC);
+	
+	
+	OnRev(LeftEngine, Vx_e);
+	OnFwd(RightEngine, Vx_d);
+	DifferentialDriveKinematic();
+        Off(OUT_BC);
+	Release(motor_control);
+}
+
+
+
+task diferential_modeling()
+{
+    while(true)
+    {
+        dt_o = CurrentTick();
+        MotorB_TachoAnt = abs(MotorTachoCount(OUT_B));   
+        MotorC_TachoAnt = abs(MotorTachoCount(OUT_C));
+        int time_aux = 0;
+        while(time_aux <= 1000)
+        {
+            MotorBtacho += abs(MotorTachoCount(OUT_B));
+            MotorCtacho += abs(MotorTachoCount(OUT_C));
+            dt += CurrentTick() - dt_o;
+            dt_o = dt;
+            time_aux += 1;
+        }
+        MotorBtacho = abs(MotorBtacho - MotorB_TachoAnt);
+        MotorCtacho = abs(MotorCtacho - MotorC_TachoAnt);
+        long deltaSd = (2*PI*WHELL_RADIUS)*(MotorBtacho/360);
+        long deltaSe = (2*PI*WHELL_RADIUS)*(MotorCtacho/360);
+        Vx_d = deltaSd/dt;
+        Vx_e = deltaSe/dt;
+        if(Vx_d == 0 || Vx_e == 0){
+        	Vx_d = 34;
+        	Vx_e = 30;
+        }
+        float dot_teta = (Vx_e/(2*BOB_DIAMETER)) - (Vx_d/(2*BOB_DIAMETER));
+        tetaG += abs(dot_teta)*(180/PI);
+    }
+}
+
+task to_foward_avoid()
+{
+    while(true)
+    {
+        if((SensorUS(IN_4) < WALL &&  SensorValue(IN_1) == 1))
+        {
+            Acquire(motor_control);
+            while(tetaG <= 90)
+            {
+                OnFwd(LeftEngine, Vx_e);
+                OnRev(RightEngine, Vx_d);
+            }
+            tetaG = 0;
+            Release(motor_control);
+        }
+    }
+}
+
+task line_detector()
+{
+    while(true)
+    {
+        if(SensorValue(IN_3) < BLACK)
+        {
+            if(state == "Recharge" || state == "Warehouse" || state == "ExitWarehouse" || state == "Housing")
+            {
+                 pivoting();
+            }
+            if(state == "Stock" || state == "SearchBase" || state == "SearchRecharge")
+            {
+            	Acquire(motor_control);
+		OnRev(LeftEngine, Vx_e);
+		OnRev(RightEngine, Vx_d);
+		DifferentialDriveKinematic();
+		Off(OUT_BC);
+		Release(motor_control);
+
+		Acquire(motor_control);
+		OnRev(RightEngine, Vx_d);
+		OnFwd(LeftEngine, Vx_e);
+		DifferentialDriveKinematic();
+		Off(OUT_BC);
+		Release(motor_control);
+            }
+            if(state == "ExitHousing")
+            {
+            	Acquire(motor_control);
+		OnRev(LeftEngine, Vx_e);
+		OnRev(RightEngine, Vx_d);
+		DifferentialDriveKinematic();
+		Off(OUT_BC);
+		Release(motor_control);
+
+		Acquire(motor_control);
+		OnRev(RightEngine, Vx_d);
+		OnFwd(LeftEngine, Vx_e);
+		DifferentialDriveKinematic();
+		DifferentialDriveKinematic();
+		Off(OUT_BC);
+		Release(motor_control);
+            }
+            if(state == "Download")
+            {
+                if(SensorValue(IN_3) > REDMIN && SensorValue(IN_3) < REDMAX)
+                {
+                	Acquire(motor_control);
+			OnRev(LeftEngine, Vx_e);
+			OnRev(RightEngine, Vx_d);
+			DifferentialDriveKinematic();
+			Off(OUT_BC);
+			Release(motor_control);
+
+			Acquire(motor_control);
+			OnRev(RightEngine, Vx_d);
+			OnFwd(LeftEngine, Vx_e);
+			DifferentialDriveKinematic();
+			DifferentialDriveKinematic();
+			Off(OUT_BC);
+			Release(motor_control);
+                }
+            }
+
+        }
+        if(SensorValue(IN_3) > SILVER)
+        {
+		localCounter = localCounter + 1;
+		Wait(200);
+		if(localCounter > 8)
+		{
+			localCounter = 0;
+	    	}
+	    	localMS();
+	}
+	Acquire(motor_control);
+        OnFwd(LeftEngine, Vx_e);
+        OnFwd(RightEngine, Vx_d);
+    	Release(motor_control); 
+    }
+}
+
+task clawn()
+{
+    while(true)
+    {
+        if(state == "Warehouse")
+        {
+            if(SensorUS(IN_4) <= OBJECT && Getted == false && SensorValue(IN_1) == 0)
+            {
+                Acquire(motor_control);
+                while(tetaG < 180)
+                {
+                    OnFwd(LeftEngine, Vx_e);
+                    OnRev(RightEngine, Vx_d);
+                }
+                tetaG = 0;
+                RotateMotor(OUT_A, 25, -45);
+                OnRev(LeftEngine, Vx_e);
+                OnRev(RightEngine, Vx_d);
+                Wait(500);
+                RotateMotor(OUT_A, 25, 45);
+                Off(OUT_A);
+                localCounter = localCounter + 1;
+                while(tetaG < 180)
+                {
+                    OnRev(LeftEngine, Vx_e);
+                    OnFwd(RightEngine, Vx_d);
+                }
+                tetaG = 0;
+                Release(motor_control);
+            }
+        }
+        if(state == "Download")
+        {
+            Wait(200);
+            Acquire(motor_control);
+            while(tetaG < 180)
+            {
+                OnFwd(LeftEngine, Vx_e);
+                OnRev(RightEngine, Vx_d);
+            }
+            tetaG = 0;
+            RotateMotor(OUT_A, 25, -45);
+            OnRev(LeftEngine, Vx_e);
+            OnRev(RightEngine, Vx_d);
+            Wait(500);
+            OnFwd(LeftEngine, Vx_e);
+            OnFwd(RightEngine, Vx_d);
+            Wait(500);
+            RotateMotor(OUT_A, 25, 45);
+            Off(OUT_A);
+            localCounter = localCounter + 1;
+            while(tetaG < 180)
+            {
+                OnRev(LeftEngine, Vx_e);
+                OnFwd(RightEngine, Vx_d);
+            }
+            tetaG = 0;
+            Release(motor_control);
+        }
+    }
+}
+
+task main()
+{
+    SetSensorLight(IN_3);
+	SetSensorUltrasonic(IN_4);
+	SetSensorTouch(IN_1);
+	SetSensorTouch(IN_2);
+	while(SensorValue(IN_2) != 1);
+	Precedes(line_detector, diferential_modeling,to_foward_avoid,clawn);
+}
+
+
+
