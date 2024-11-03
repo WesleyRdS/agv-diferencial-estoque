@@ -22,7 +22,7 @@ while True:
     Fposition_right = MotorRight.get_tacho()
     tf = time.gettime_ns()
     OmegaL = (Fposition_left - Iposition_left)/(tf-to)
-    OmegaR = (Fposition_right - Iposition_right)/(tf-to)
+    OmegaR = (Fposition_right - IPosition_right)/(tf-to)
     
     Vxg = (((r*OmegaR)/2) + ((r*OmegaL)/2))
     TETAg = (((r*OmegaR)/2*L) - ((r*OmegaL)/2*L))

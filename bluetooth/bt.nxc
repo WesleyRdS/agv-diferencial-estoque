@@ -1,0 +1,21 @@
+#define BT_CHANNEL 1  
+
+task main()
+{
+
+    SetBluetoothChannel(BT_CHANNEL);
+
+   
+    int counterB = MotorTachoCount(OUT_B);
+    int counterC = MotorTachoCount(OUT_C);
+
+    
+    char message[50];
+    sprintf(message, "B:%d C:%d\n", counterB, counterC);
+
+
+    WriteBT(message);
+
+
+    Wait(1000); 
+}
