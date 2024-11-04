@@ -1,8 +1,8 @@
 #define WALL 25
 #define BLACK 50
-#define SILVER 77
-#define REDMAX 63
-#define REDMIN 60
+#define SILVER 73
+#define REDMAX 59
+#define REDMIN 62
 #define OBJECT 23
 #define LeftEngine OUT_B
 #define RightEngine OUT_C
@@ -11,8 +11,9 @@
 string state  = "Recharge";
 bool Getted = false;
 int localCounter = 0;
+int changeDirection = 0;
 float Vx_d = 30;
-float Vx_e = 33.25;
+float Vx_e = 34;
 mutex motor_control;
 
 void localMS()
@@ -53,11 +54,20 @@ void localMS()
 void DifferentialDriveKinematic(){
 	long tf;
 
-	tf = CurrentTick() + 1800;
+	tf = CurrentTick() + 1000;
 	while(CurrentTick() < tf);
 	tf = 0;
 }
-void pivoting(){
+
+void reverseDirection(){
+    if(changeDirection == 0){
+        changeDirection = 1;
+    }else{
+        changeDirection = 0;
+    }
+}
+
+void pivotingR(){
 	//Curva
 	Acquire(motor_control);
 	OnRev(LeftEngine, Vx_e);
@@ -87,6 +97,36 @@ void pivoting(){
 	Release(motor_control);
 }
 
+void pivotingL(){
+	//Curva
+	Acquire(motor_control);
+	OnRev(LeftEngine, Vx_e);
+        OnRev(RightEngine, Vx_d);
+	DifferentialDriveKinematic();
+        Off(OUT_BC);
+	Release(motor_control);
+
+	Acquire(motor_control);
+	OnFwd(RightEngine, Vx_d);
+	OnRev(LeftEngine, Vx_e);
+	DifferentialDriveKinematic();
+        Off(OUT_BC);
+	Release(motor_control);
+
+	Acquire(motor_control);
+	OnFwd(LeftEngine, Vx_e);
+    	OnFwd(RightEngine, Vx_d);
+	DifferentialDriveKinematic();
+	Off(OUT_BC);
+	
+	
+	OnFwd(LeftEngine, Vx_e);
+	OnRev(RightEngine, Vx_d);
+	DifferentialDriveKinematic();
+        Off(OUT_BC);
+	Release(motor_control);
+}
+
 task to_foward_avoid()
 {
     while(true)
@@ -95,27 +135,54 @@ task to_foward_avoid()
     	{
     		if((SensorUS(IN_4) < WALL ||  SensorValue(IN_1) == 1))
         	{
-
-			Acquire(motor_control);
-			OnRev(RightEngine, Vx_d);
-			OnFwd(LeftEngine, Vx_e);
-			DifferentialDriveKinematic();
-			Off(OUT_BC);
-			Release(motor_control);
-			
-			Acquire(motor_control);
-			OnFwd(LeftEngine, Vx_e);
-			OnFwd(RightEngine, Vx_d);
-			DifferentialDriveKinematic();
-			Off(OUT_BC);
-			Release(motor_control);
-			
-			Acquire(motor_control);
-			OnRev(RightEngine, Vx_d);
-			OnFwd(LeftEngine, Vx_e);
-			DifferentialDriveKinematic();
-			Off(OUT_BC);
-			Release(motor_control);
+                    Acquire(motor_control);
+                    Off(OUT_BC);
+                    reverseDirection();
+                    Wait(400);
+                    Release(motor_control);
+                if(changeDirection == 0){
+			        Acquire(motor_control);
+			        OnRev(RightEngine, Vx_d);
+			        OnFwd(LeftEngine, Vx_e);
+			        DifferentialDriveKinematic();
+			        Off(OUT_BC);
+			        Release(motor_control);
+			        
+			        Acquire(motor_control);
+			        OnFwd(LeftEngine, Vx_e);
+			        OnFwd(RightEngine, Vx_d);
+			        DifferentialDriveKinematic();
+			        Off(OUT_BC);
+			        Release(motor_control);
+			        
+			        Acquire(motor_control);
+			        OnRev(RightEngine, Vx_d);
+			        OnFwd(LeftEngine, Vx_e);
+			        DifferentialDriveKinematic();
+			        Off(OUT_BC);
+			        Release(motor_control);
+                }else{
+                    Acquire(motor_control);
+			        OnFwd(RightEngine, Vx_d);
+			        OnRev(LeftEngine, Vx_e);
+			        DifferentialDriveKinematic();
+			        Off(OUT_BC);
+			        Release(motor_control);
+			        
+			        Acquire(motor_control);
+			        OnFwd(LeftEngine, Vx_e);
+			        OnFwd(RightEngine, Vx_d);
+			        DifferentialDriveKinematic();
+			        Off(OUT_BC);
+			        Release(motor_control);
+			        
+			        Acquire(motor_control);
+			        OnFwd(RightEngine, Vx_d);
+			        OnRev(LeftEngine, Vx_e);
+			        DifferentialDriveKinematic();
+			        Off(OUT_BC);
+			        Release(motor_control);
+                }
 
             
         	}
@@ -123,19 +190,31 @@ task to_foward_avoid()
     	else{
     		if((SensorUS(IN_4) < WALL &&  SensorValue(IN_1) == 1))
         	{
-		    	Acquire(motor_control);
-			OnRev(LeftEngine, Vx_e);
-			OnRev(RightEngine, Vx_d);
-			DifferentialDriveKinematic();
-			Off(OUT_BC);
-			Release(motor_control);
-
-			Acquire(motor_control);
-			OnRev(RightEngine, Vx_d);
-			OnFwd(LeftEngine, Vx_e);
-			DifferentialDriveKinematic();
-			Off(OUT_BC);
-			Release(motor_control);
+            Acquire(motor_control);
+            Off(OUT_BC);
+            reverseDirection();
+            Wait(400);
+		    OnRev(LeftEngine, Vx_e);
+		    OnRev(RightEngine, Vx_d);
+		    DifferentialDriveKinematic();
+		    Off(OUT_BC);
+		    Release(motor_control);
+            if(changeDirection == 0){
+			    Acquire(motor_control);
+			    OnRev(RightEngine, Vx_d);
+			    OnFwd(LeftEngine, Vx_e);
+			    DifferentialDriveKinematic();
+			    Off(OUT_BC);
+			    Release(motor_control);
+            }
+            else{
+                Acquire(motor_control);
+			    OnFwd(RightEngine, Vx_d);
+			    OnRev(LeftEngine, Vx_e);
+			    DifferentialDriveKinematic();
+			    Off(OUT_BC);
+			    Release(motor_control);
+            }
             
         	}
     	}
@@ -151,9 +230,14 @@ task line_detector()
         {
             if(state == "Stock" || state == "Recharge" || state == "Warehouse" || state == "ExitWarehouse" || state == "Housing")
             {
-                 pivoting();
+                 if(changeDirection == 0){
+                    pivotingR();
+                 }
+                 else{
+                    pivotingL();
+                 }
             }
-            if(state == "SearchBase" || state == "SearchRecharge")
+            if(state == "SearchBase")
             {
             	Acquire(motor_control);
 		OnRev(LeftEngine, Vx_e);
@@ -190,6 +274,8 @@ task line_detector()
             {
                 if(SensorValue(IN_3) > REDMIN && SensorValue(IN_3) < REDMAX)
                 {
+			localCounter = localCounter - 1;
+			localMS();
                 	Acquire(motor_control);
 			OnRev(LeftEngine, Vx_e);
 			OnRev(RightEngine, Vx_d);
@@ -208,6 +294,44 @@ task line_detector()
             }
 
         }
+	if(state == "SearchRecharge"){
+		Wait(400);
+		Acquire(motor_control);
+		OnRev(RightEngine, Vx_d);
+		OnFwd(LeftEngine, Vx_e);
+		DifferentialDriveKinematic();
+		DifferentialDriveKinematic();
+		Off(OUT_BC);
+		Release(motor_control);
+		if(SensorValue(IN_3) < BLACK)
+        	{
+			Acquire(motor_control);
+			OnRev(LeftEngine, Vx_e);
+			OnRev(RightEngine, Vx_d);
+			DifferentialDriveKinematic();
+			Off(OUT_BC);
+			Release(motor_control);
+
+			Acquire(motor_control);
+			OnRev(RightEngine, Vx_d);
+			OnFwd(LeftEngine, Vx_e);
+			DifferentialDriveKinematic();
+			DifferentialDriveKinematic();
+			Off(OUT_BC);
+			Release(motor_control);
+		}
+		if( SensorValue(IN_1) == 1)
+        	{
+			Acquire(motor_control);
+			OnRev(RightEngine, Vx_d);
+			OnFwd(LeftEngine, Vx_e);
+			DifferentialDriveKinematic();
+			DifferentialDriveKinematic();
+			Off(OUT_BC);
+			Release(motor_control);
+			Stop(true);	
+		}
+	}
         if(SensorValue(IN_3) >= SILVER)
         {
         	Wait(400);
@@ -227,19 +351,23 @@ task line_detector()
 
 task clawn()
 {
+	int count_aux = 0;
     while(true)
     {
         if(state == "Warehouse")
         {
+        	if (count_aux == 0){
+			Wait(1600);
+			Acquire(motor_control);
+			OnRev(RightEngine, Vx_d);
+			OnFwd(LeftEngine, Vx_e);
+			DifferentialDriveKinematic();
+			Off(OUT_BC);
+			Release(motor_control);
+			count_aux+=1;
+		}
             if(SensorUS(IN_4) <= OBJECT && Getted == false && SensorValue(IN_1) == 0)
             {
-		Wait(500);
-		Acquire(motor_control);
-		OnRev(RightEngine, Vx_d);
-		OnFwd(LeftEngine, Vx_e);
-		DifferentialDriveKinematic();
-		Off(OUT_BC);
-		Release(motor_control);
 		Acquire(motor_control);
 		OnRev(RightEngine, Vx_d);
 		OnFwd(LeftEngine, Vx_e);
@@ -257,14 +385,10 @@ task clawn()
 		Off(OUT_BC);
 		RotateMotor(OUT_A, 50, -45);
 		Getted = true;
-		localCounter = localCounter + 1;
-		if(localCounter > 8)
-		{
-			localCounter = 0;
-	    	}
+		localCounter = 3;
 	    	localMS();
 		Off(OUT_BC);
-		Wait(500);
+		Wait(250);
 		Release(motor_control);
 		Acquire(motor_control);
 		OnFwd(RightEngine, Vx_d);
@@ -277,29 +401,35 @@ task clawn()
         }
         if(state == "Download" && Getted == true)
         {
-            Wait(500);
-            Acquire(motor_control);
-		OnRev(RightEngine, Vx_d);
-		OnFwd(LeftEngine, Vx_e);
-		DifferentialDriveKinematic();
-		DifferentialDriveKinematic();
-		Off(OUT_BC);
-		Release(motor_control);
-		RotateMotor(OUT_A, 50, 45);
-		Acquire(motor_control);
-		OnFwd(LeftEngine, Vx_e);
-		OnFwd(RightEngine, Vx_d);
-		DifferentialDriveKinematic();
-		Off(OUT_BC);
-		Release(motor_control);
-		RotateMotor(OUT_A, 50, -45);
-		Acquire(motor_control);
-		OnFwd(RightEngine, Vx_d);
-		OnRev(LeftEngine, Vx_e);
-		DifferentialDriveKinematic();
-		DifferentialDriveKinematic();
-		Off(OUT_BC);
-		Release(motor_control);
+            	Wait(250);
+		if(state == "Download" && Getted == true)
+        	{
+            		Acquire(motor_control);
+			OnRev(RightEngine, Vx_d);
+			OnFwd(LeftEngine, Vx_e);
+			DifferentialDriveKinematic();
+			DifferentialDriveKinematic();
+			Off(OUT_BC);
+			Release(motor_control);
+			RotateMotor(OUT_A, 50, 45);
+			Acquire(motor_control);
+			OnFwd(LeftEngine, Vx_e);
+			OnFwd(RightEngine, Vx_d);
+			DifferentialDriveKinematic();
+			Off(OUT_BC);
+			Release(motor_control);
+			RotateMotor(OUT_A, 50, -45);
+			Getted = false;
+			Acquire(motor_control);
+			OnFwd(RightEngine, Vx_d);
+			OnRev(LeftEngine, Vx_e);
+			DifferentialDriveKinematic();
+			DifferentialDriveKinematic();
+			Off(OUT_BC);
+			localCounter = 6;
+			localMS();
+			Release(motor_control);
+		}
         }
     }
 }
@@ -313,5 +443,6 @@ task main()
 
 	Precedes(line_detector,to_foward_avoid,clawn);
 }
+
 
 
