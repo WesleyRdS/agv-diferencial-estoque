@@ -1,8 +1,8 @@
 #define WALL 25
 #define BLACK 50
 #define SILVER 73
-#define REDMAX 59
-#define REDMIN 62
+#define REDMAX 62
+#define REDMIN 59
 #define OBJECT 23
 #define LeftEngine OUT_B
 #define RightEngine OUT_C
