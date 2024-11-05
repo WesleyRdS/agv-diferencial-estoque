@@ -1,9 +1,10 @@
 #define WALL 25
 #define BLACK 50
 #define SILVER 73
-#define REDMAX 62
-#define REDMIN 59
+#define REDMAX 59
+#define REDMIN 62
 #define OBJECT 23
+#define OBJECTMAX 30
 #define LeftEngine OUT_B
 #define RightEngine OUT_C
 
@@ -13,7 +14,7 @@ bool Getted = false;
 int localCounter = 0;
 int changeDirection = 0;
 float Vx_d = 30;
-float Vx_e = 34;
+float Vx_e = 33;
 mutex motor_control;
 
 void localMS()
@@ -54,7 +55,7 @@ void localMS()
 void DifferentialDriveKinematic(){
 	long tf;
 
-	tf = CurrentTick() + 1000;
+	tf = CurrentTick() + 1200;
 	while(CurrentTick() < tf);
 	tf = 0;
 }
@@ -129,10 +130,21 @@ void pivotingL(){
 
 task to_foward_avoid()
 {
+	int aux_housing = 0;
     while(true)
     {
     	if(state == "Housing")
     	{
+    		Wait(1200);
+    		if(aux_housing == 0){
+    			Acquire(motor_control);
+			OnRev(RightEngine, Vx_d);
+			OnFwd(LeftEngine, Vx_e);
+			DifferentialDriveKinematic();
+			Off(OUT_BC);
+			Release(motor_control);
+			aux_housing = 1;
+    		}
     		if((SensorUS(IN_4) < WALL ||  SensorValue(IN_1) == 1))
         	{
                     Acquire(motor_control);
@@ -151,7 +163,7 @@ task to_foward_avoid()
 			        Acquire(motor_control);
 			        OnFwd(LeftEngine, Vx_e);
 			        OnFwd(RightEngine, Vx_d);
-			        DifferentialDriveKinematic();
+			        Wait(400);
 			        Off(OUT_BC);
 			        Release(motor_control);
 			        
@@ -172,7 +184,7 @@ task to_foward_avoid()
 			        Acquire(motor_control);
 			        OnFwd(LeftEngine, Vx_e);
 			        OnFwd(RightEngine, Vx_d);
-			        DifferentialDriveKinematic();
+			        Wait(400);
 			        Off(OUT_BC);
 			        Release(motor_control);
 			        
@@ -368,6 +380,7 @@ task clawn()
 		}
             if(SensorUS(IN_4) <= OBJECT && Getted == false && SensorValue(IN_1) == 0)
             {
+            	
 		Acquire(motor_control);
 		OnRev(RightEngine, Vx_d);
 		OnFwd(LeftEngine, Vx_e);
@@ -387,6 +400,7 @@ task clawn()
 		Getted = true;
 		localCounter = 3;
 	    	localMS();
+	    	reverseDirection();
 		Off(OUT_BC);
 		Wait(250);
 		Release(motor_control);
@@ -397,14 +411,16 @@ task clawn()
 		DifferentialDriveKinematic();
 		Off(OUT_BC);
 		Release(motor_control);
+	
             }
         }
         if(state == "Download" && Getted == true)
         {
-            	Wait(250);
+            	Wait(800);
 		if(state == "Download" && Getted == true)
         	{
-            		Acquire(motor_control);
+        		
+	    		Acquire(motor_control);
 			OnRev(RightEngine, Vx_d);
 			OnFwd(LeftEngine, Vx_e);
 			DifferentialDriveKinematic();
@@ -429,6 +445,7 @@ task clawn()
 			localCounter = 6;
 			localMS();
 			Release(motor_control);
+
 		}
         }
     }
@@ -440,7 +457,7 @@ task main()
 	SetSensorUltrasonic(IN_4);
 	SetSensorTouch(IN_1);
 	SetSensorTouch(IN_2);
-
+	while(SensorValue(IN_1) == 0);
 	Precedes(line_detector,to_foward_avoid,clawn);
 }
 
