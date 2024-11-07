@@ -12,16 +12,16 @@ OmegaR = 0
 Vxg = 0
 TETAg = 0
 started = False
-
-def run_bob():
-    for event in pygame.event.get():
-        if event.type == pygame.KEYDOWN or event.type == pygame.KEYUP:
-            if event.key == pygame.K_SPACE and started == False:
-                started = True
-                bob = nxt.locator.find(host="00:16:53:09:72:DE")
-                bob.start_program("Bob6.rxe")
-                MotorLeft = bob.get_motor(nxt.motor.Port.B)
-                MotorRight = bob.get_motor(nxt.motor.Port.C)
+MotorLeft = 0
+MotorRight = 0
+started = True
+bob = nxt.locator.find(host="00:16:53:09:72:DE")
+bob.start_program("Bob6.rxe")
+MotorLeft = bob.get_motor(nxt.motor.Port.B)
+MotorRight = bob.get_motor(nxt.motor.Port.C)
+aux_direction = 0
+G_ant = -1
+move_direction = "X"
 
 def separa_elementos(vetor):
     numeros = vetor.strip("()").split(", ")
@@ -34,21 +34,20 @@ def diferential_cinematic():
     Fposition_right = 0
     vetorL = MotorLeft.get_tacho().__str__()
     vetorR = MotorRight.get_tacho().__str__()
-    Iposition_left = separa_elementos(vetorL)
-    Iposition_right = separa_elementos(vetorR)
+    Fposition_left = separa_elementos(vetorL)
+    Fposition_right = separa_elementos(vetorR)
     to = time.clock_gettime_ns(time.CLOCK_REALTIME)
-    
-    for i in range(0,10):
-        Fposition_left += separa_elementos(vetorL)
-        Fposition_right += separa_elementos(vetorR)
-        time.sleep(0.1)
+    time.sleep(0.0004)
     tf = time.clock_gettime_ns(time.CLOCK_REALTIME)
-    OmegaL = (Fposition_left[2] - Iposition_left[2])/(tf-to)
-    OmegaR = (Fposition_right[2] - Iposition_right[2])/(tf-to)
+    OmegaL = (Fposition_left[2])/(tf-to)
+    OmegaR = (Fposition_right[2])/(tf-to)
     Vxg = (((r*OmegaR)/2) + ((r*OmegaL)/2))
     TETAg = (((r*OmegaR)/2*L) - ((r*OmegaL)/2*L))
+
     data.append(Vxg)
     data.append(TETAg)
+    data.append(OmegaL)
+    data.append(OmegaR)
     return data
 
 
@@ -72,7 +71,7 @@ def draw_workspace():
     warehouse_line = (2.7 - base_line_distance) * workspace_horizontal
     pygame.draw.line(screen,(0, 0, 0), (recharge_line, 0), (recharge_line, h_display), width=5)
     pygame.draw.line(screen,(0, 0, 0), (warehouse_line, 0), (warehouse_line, h_display), width=5)
-
+	
 
     housing_horizontal = housing_line_distance * workspace_horizontal
     housing_vertical = housing_line_distance * workspace_vertical
@@ -94,17 +93,45 @@ while running:
         if event.type == pygame.QUIT:
             running == False
 
-    run_bob()
     screen.fill((255, 255, 255))
     
     draw_workspace()
     bob_6_new_testament_two_point_0(x,y)
     G = diferential_cinematic()
-    if(G[1] != 0){
-        y += G[0]
-    }else{
-        x += G[0]
-    }
+    
+    if(G[2] < 0 and G[3] > 0): #esquerda
+    	if(move_direction == "X"):
+    		move_direction = "-Y"
+    	elif(move_direction == "-Y"):
+    		move_direction = "-X"
+    	elif(move_direction == "-X"):
+    		move_direction = "Y"
+    	else:
+    		move_direction = "X"
+    		
+   elif(G[2] > 0 and G[3] < 0): #direita
+        if(move_direction == "X"):
+    		move_direction = "Y"
+    	elif(move_direction == "Y"):
+    		move_direction = "-X"
+    	elif(move_direction == "-X"):
+    		move_direction = "-Y"
+    	else:
+    		move_direction = "X"
+            
+    if(move_direction == "Y"):
+		y -= G[0]*workspace_vertical
+		print("Y1: ",y)
+    elif(move_direction == "-Y"):
+    		y += G[0]*workspace_vertical
+    		print("Y2: ",x)
+    elif(move_direction == "X"):
+        	x -= G[0]*workspace_horizontal
+        	print("X1: ",x)
+    elif(move_direction == "-X"):
+    		x += G[0]*workspace_horizontal
+    		print("X2: ",x)
+    G_ant = G[1]
     pygame.display.flip()
 
 

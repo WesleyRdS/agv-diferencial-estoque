@@ -1,8 +1,8 @@
 #define WALL 25
 #define BLACK 50
 #define SILVER 73
-#define REDMAX 59
-#define REDMIN 62
+#define REDMAX 62
+#define REDMIN 59
 #define OBJECT 23
 #define OBJECTMAX 30
 #define LeftEngine OUT_B
@@ -133,6 +133,7 @@ task to_foward_avoid()
 	int aux_housing = 0;
     while(true)
     {
+    	SendResponseNumber(MAILBOX1, 123);
     	if(state == "Housing")
     	{
     		Wait(1200);
@@ -306,44 +307,7 @@ task line_detector()
             }
 
         }
-	if(state == "SearchRecharge"){
-		Wait(400);
-		Acquire(motor_control);
-		OnRev(RightEngine, Vx_d);
-		OnFwd(LeftEngine, Vx_e);
-		DifferentialDriveKinematic();
-		DifferentialDriveKinematic();
-		Off(OUT_BC);
-		Release(motor_control);
-		if(SensorValue(IN_3) < BLACK)
-        	{
-			Acquire(motor_control);
-			OnRev(LeftEngine, Vx_e);
-			OnRev(RightEngine, Vx_d);
-			DifferentialDriveKinematic();
-			Off(OUT_BC);
-			Release(motor_control);
-
-			Acquire(motor_control);
-			OnRev(RightEngine, Vx_d);
-			OnFwd(LeftEngine, Vx_e);
-			DifferentialDriveKinematic();
-			DifferentialDriveKinematic();
-			Off(OUT_BC);
-			Release(motor_control);
-		}
-		if( SensorValue(IN_1) == 1)
-        	{
-			Acquire(motor_control);
-			OnRev(RightEngine, Vx_d);
-			OnFwd(LeftEngine, Vx_e);
-			DifferentialDriveKinematic();
-			DifferentialDriveKinematic();
-			Off(OUT_BC);
-			Release(motor_control);
-			Stop(true);	
-		}
-	}
+	
         if(SensorValue(IN_3) >= SILVER)
         {
         	Wait(400);
@@ -396,7 +360,7 @@ task clawn()
 		Release(motor_control);
 		Acquire(motor_control);
 		Off(OUT_BC);
-		RotateMotor(OUT_A, 50, -45);
+		RotateMotorEx(OUT_A, 50, -45, 0, false, true);
 		Getted = true;
 		localCounter = 3;
 	    	localMS();
@@ -448,7 +412,21 @@ task clawn()
 
 		}
         }
+        if(state == "SearchRecharge")
+    	{
+    		Wait(2000);
+    		Acquire(motor_control);
+	        OnFwd(RightEngine, Vx_d);
+	        OnRev(LeftEngine, Vx_e);
+	        DifferentialDriveKinematic();
+	        DifferentialDriveKinematic();
+	        Off(OUT_BC);
+	        Release(motor_control);
+    		StopAllTasks();
+	}
+        
     }
+    
 }
 
 task main()
@@ -456,8 +434,6 @@ task main()
     SetSensorLight(IN_3);
 	SetSensorUltrasonic(IN_4);
 	SetSensorTouch(IN_1);
-	SetSensorTouch(IN_2);
-	while(SensorValue(IN_1) == 0);
 	Precedes(line_detector,to_foward_avoid,clawn);
 }
 
